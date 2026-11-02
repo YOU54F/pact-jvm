@@ -1,5 +1,6 @@
 package au.com.dius.pact.core.matchers
 
+import au.com.dius.pact.core.model.ContentType
 import au.com.dius.pact.core.model.OptionalBody
 import au.com.dius.pact.core.model.PactReaderKt
 import au.com.dius.pact.core.model.Request
@@ -198,6 +199,27 @@ class MatchingSpec extends Specification {
 
     then:
     result.mismatches.empty
+  }
+
+  @Issue('pact-foundation/pact-go#263')
+  def 'Body Matching - uses the expected body type when the actual has no content type header'() {
+    given:
+    def image = MatchingSpec.getResourceAsStream('/RAT.JPG').bytes
+    def expected = new Response(200, [:], OptionalBody.body(image, new ContentType('application/octet-stream')))
+    def actual = new Response(200, headers, OptionalBody.body(sameBody ? image : 'hello'.bytes))
+
+    when:
+    def result = Matching.INSTANCE.matchBody(expected, actual, bodyContext).mismatches
+
+    then:
+    result.empty == matches
+
+    where:
+    headers                                        | sameBody | matches
+    [:]                                            | true     | true
+    [:]                                            | false    | false
+    ['Content-Type': ['application/octet-stream']] | true     | true
+    ['Content-Type': ['application/json']]         | true     | false
   }
 
   @Issue('#401')
