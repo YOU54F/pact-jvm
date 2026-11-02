@@ -11,6 +11,7 @@ import au.com.dius.pact.core.model.OptionalBody
 import au.com.dius.pact.core.model.Provider
 import au.com.dius.pact.core.model.V4Interaction
 import au.com.dius.pact.core.model.V4Pact
+import au.com.dius.pact.core.model.PactReaderKt
 import au.com.dius.pact.core.support.json.JsonParser
 import au.com.dius.pact.core.support.json.JsonValue
 import io.cucumber.datatable.DataTable
@@ -95,6 +96,7 @@ class HttpMatching {
   void an_expected_request_configured_with_the_following(DataTable dataTable) {
     expectedRequest = new HttpRequest()
     def entry = dataTable.entries().first()
+    setupQueryAndHeaders(expectedRequest, entry)
     if (entry['body']) {
       def part
       if (entry['content type']) {
@@ -124,6 +126,7 @@ class HttpMatching {
   void a_request_is_received_with_the_following(DataTable dataTable) {
     receivedRequests << new HttpRequest()
     def entry = dataTable.entries().first()
+    setupQueryAndHeaders(receivedRequests[0], entry)
     if (entry['body']) {
       def part
       if (entry['content type']) {
@@ -149,6 +152,19 @@ class HttpMatching {
     // A real request carries no body type of its own, only what can be sniffed from the bytes
     if (request.body.present) {
       request.body = OptionalBody.body(request.body.unwrap())
+    }
+  }
+
+  // The headers column is a JSON object of a name to a list of values, so values can contain commas
+  static void setupQueryAndHeaders(HttpRequest request, Map<String, String> entry) {
+    if (entry['query']) {
+      request.query = PactReaderKt.queryStringToMap(entry['query'])
+    }
+    if (entry['headers']) {
+      def headers = JsonParser.INSTANCE.parseString(entry['headers'])
+      headers.entries.each { name, values ->
+        request.headers[name] = values.values*.asString()
+      }
     }
   }
 
