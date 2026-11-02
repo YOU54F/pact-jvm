@@ -53,9 +53,11 @@ object DefaultResponseGenerator: ResponseGenerator, MessageContentsGenerator, KL
     }
     val headerGenerators = r.setupGenerators(Category.HEADER, context)
     if (headerGenerators.isNotEmpty()) {
-      Generators.applyGenerators(headerGenerators, testMode) { key, g ->
-        r.headers[key] = listOf(g.generate(context, r.headers[key]).toString())
-      }
+      val headers: MutableMap<String, List<String?>> = r.headers.toMutableMap()
+      Generators.applyValueGenerators(headers, headerGenerators, testMode, context, ignoreCase = true,
+        generateMissing = true)
+      r.headers.clear()
+      r.headers.putAll(headers.mapValues { (_, values) -> values.map { it.toString() } })
     }
     if (r.body.isPresent()) {
       val bodyGenerators = r.setupGenerators(Category.BODY, context)

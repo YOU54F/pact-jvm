@@ -5,6 +5,7 @@ import au.com.dius.pact.core.model.InvalidPactException
 import au.com.dius.pact.core.model.JsonUtils.queryObjectGraph
 import au.com.dius.pact.core.model.OptionalBody
 import au.com.dius.pact.core.model.PactSpecVersion
+import au.com.dius.pact.core.model.indexedValueKey
 import au.com.dius.pact.core.model.lessThan
 import au.com.dius.pact.core.model.parsePath
 import au.com.dius.pact.core.support.Json
@@ -133,6 +134,41 @@ data class Generators(val categories: MutableMap<Category, MutableMap<String, Ge
       for ((key, generator) in generators) {
         if (generator.correspondsToMode(mode)) {
           closure.invoke(key, generator)
+        }
+      }
+    }
+
+    /**
+     * Applies the generators to the values of headers or query parameters. A generator keyed by the name applies to
+     * every value (and generates a single value if [generateMissing] is set and there are none). A generator keyed
+     * by an indexed path (`$.name[1]`) applies only to that value, and runs after the ones for the name.
+     */
+    @Suppress("LongParameterList")
+    fun applyValueGenerators(
+      values: MutableMap<String, List<String?>>,
+      generators: Map<String, Generator>,
+      mode: GeneratorTestMode,
+      context: MutableMap<String, Any>,
+      ignoreCase: Boolean,
+      generateMissing: Boolean
+    ) {
+      fun existingKey(name: String) = values.keys.firstOrNull { it.equals(name, ignoreCase) }
+      val (indexed, named) = generators.entries.filter { it.value.correspondsToMode(mode) }
+        .partition { indexedValueKey(it.key) != null }
+      for ((key, generator) in named) {
+        val existing = existingKey(key)
+        if (existing != null) {
+          values[existing] = values[existing]!!.map { generator.generate(context, it).toString() }
+        } else if (generateMissing) {
+          values[key] = listOf(generator.generate(context, null).toString())
+        }
+      }
+      for ((key, generator) in indexed) {
+        val (name, index) = indexedValueKey(key)!!
+        val existing = existingKey(name) ?: continue
+        val current = values[existing]!!
+        if (index < current.size) {
+          values[existing] = current.mapIndexed { i, v -> if (i == index) generator.generate(context, v).toString() else v }
         }
       }
     }

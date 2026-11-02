@@ -15,6 +15,7 @@ import au.com.dius.pact.core.model.matchingrules.MaxEqualsIgnoreOrderMatcher
 import au.com.dius.pact.core.model.matchingrules.MinEqualsIgnoreOrderMatcher
 import au.com.dius.pact.core.model.matchingrules.MinMaxEqualsIgnoreOrderMatcher
 import au.com.dius.pact.core.model.matchingrules.ValuesMatcher
+import au.com.dius.pact.core.model.indexedValueKey
 import au.com.dius.pact.core.model.parsePath
 import au.com.dius.pact.core.support.padTo
 import io.pact.plugins.jvm.core.PluginConfiguration
@@ -74,19 +75,11 @@ data class MatchingContext @JvmOverloads constructor(
     pathComparator: Comparator<String> = Comparator.naturalOrder()
   ): MatchingRuleGroup? {
     val indexed = matchers.matchingRules.entries.firstOrNull { (key, _) ->
-      val tokens = indexedKeyTokens(key)
+      val tokens = indexedValueKey(key)
       tokens != null && pathComparator.compare(tokens.first, name) == 0 && tokens.second == index
     }
     return indexed?.value ?: matchers.matchingRules.entries
       .firstOrNull { pathComparator.compare(it.key, name) == 0 }?.value
-  }
-
-  private fun indexedKeyTokens(key: String): Pair<String, Int>? {
-    if (!key.startsWith("$")) return null
-    val tokens = runCatching { parsePath(key) }.getOrNull() ?: return null
-    return if (tokens.size == 3 && tokens[1] is PathToken.Field && tokens[2] is PathToken.Index) {
-      (tokens[1] as PathToken.Field).name to (tokens[2] as PathToken.Index).index
-    } else null
   }
 
   class BestMatcherResult(path: List<String>, val pathExp: String, val ruleGroup: MatchingRuleGroup) {

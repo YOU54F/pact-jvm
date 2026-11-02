@@ -202,6 +202,18 @@ fun parsePath(path: String): List<PathToken> {
 }
 
 /**
+ * If the key is a path to one value of a header or query parameter (`$.name[1]` or `$['name'][1]`), returns the
+ * name and the index. Keys without a leading `$` are plain names, even if they contain brackets (`ids[0]`).
+ */
+fun indexedValueKey(key: String): Pair<String, Int>? {
+  if (!key.startsWith("$")) return null
+  val tokens = runCatching { parsePath(key) }.getOrNull() ?: return null
+  return if (tokens.size == 3 && tokens[1] is PathToken.Field && tokens[2] is PathToken.Index) {
+    (tokens[1] as PathToken.Field).name to (tokens[2] as PathToken.Index).index
+  } else null
+}
+
+/**
  * This will combine the root path and the path segment to make a valid resulting path
  */
 fun constructValidPath(segment: String, rootPath: String, numbersAreIndices: Boolean = true): String {

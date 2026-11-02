@@ -116,7 +116,8 @@ open class HttpRequestBuilder(private val request: HttpRequest): HttpPartBuilder
               v.matcher!!)
           }
           if (v.generator != null) {
-            request.generators.addGenerator(Category.QUERY, "$key[$index]", v.generator!!)
+            request.generators.addGenerator(Category.QUERY,
+              constructPath(listOf("\$", key, index.toString())), v.generator!!)
           }
           v.value.toString()
         } else {
@@ -223,7 +224,8 @@ open class HttpRequestBuilder(private val request: HttpRequest): HttpPartBuilder
                   v.matcher!!)
               }
               if (v.generator != null) {
-                request.generators.addGenerator(Category.QUERY, "$k[$index]", v.generator!!)
+                request.generators.addGenerator(Category.QUERY,
+                  constructPath(listOf("\$", k, index.toString())), v.generator!!)
               }
               v.value.toString()
             } else {

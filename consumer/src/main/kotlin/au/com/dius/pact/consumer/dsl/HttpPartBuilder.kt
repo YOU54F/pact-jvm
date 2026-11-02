@@ -32,7 +32,8 @@ abstract class HttpPartBuilder(private val part: IHttpPart) {
               v.matcher!!)
           }
           if (v.generator != null) {
-            part.generators.addGenerator(Category.HEADER, "$key[$index]", v.generator!!)
+            part.generators.addGenerator(Category.HEADER,
+              constructPath(listOf("\$", key, index.toString())), v.generator!!)
           }
           v.value.toString()
         } else {
@@ -163,7 +164,8 @@ abstract class HttpPartBuilder(private val part: IHttpPart) {
                 v.matcher!!)
             }
             if (v.generator != null) {
-              part.generators.addGenerator(Category.HEADER, "$k[$index]", v.generator!!)
+              part.generators.addGenerator(Category.HEADER,
+                constructPath(listOf("\$", k, index.toString())), v.generator!!)
             }
             v.value.toString()
           } else {

@@ -14,6 +14,7 @@ import io.cucumber.java.en.When
 import static steps.shared.SharedSteps.configureBody
 import static steps.shared.SharedSteps.determineContentType
 import static steps.shared.SharedSteps.matchTypeOfElement
+import static steps.v4.HttpMatching.setupQueryAndHeaders
 
 @SuppressWarnings('SpaceAfterOpeningBrace')
 class Generators {
@@ -28,6 +29,7 @@ class Generators {
   void a_request_configured_with_the_following_generators(DataTable dataTable) {
     request = new HttpRequest('GET', '/path/one')
     def entry = dataTable.entries().first()
+    setupQueryAndHeaders(request, entry)
     if (entry['body']) {
       def part = configureBody(entry['body'], determineContentType(entry['body'], request.contentTypeHeader()))
       request.body = part.body
@@ -112,5 +114,18 @@ class Generators {
       }
       default -> throw new AssertionError("Invalid HTTP part: $part")
     }
+  }
+
+  @Then('the request query parameter {string} will be {}')
+  void the_request_query_parameter_will_be(String name, String values) {
+    def expected = JsonParser.INSTANCE.parseString(values).asArray().values*.asString()
+    assert generatedRequest.query[name] == expected
+  }
+
+  @Then('the request header {string} will be {}')
+  void the_request_header_will_be(String name, String values) {
+    def expected = JsonParser.INSTANCE.parseString(values).asArray().values*.asString()
+    def header = generatedRequest.headers.find { it.key.equalsIgnoreCase(name) }
+    assert header?.value == expected
   }
 }

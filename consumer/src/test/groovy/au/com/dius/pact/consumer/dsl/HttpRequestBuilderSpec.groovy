@@ -368,7 +368,7 @@ class HttpRequestBuilderSpec extends Specification {
         x2: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')])
       ]
     )
-    request.generators.categoryFor(Category.QUERY) == ['y[1]': new DateGenerator('yyyy')]
+    request.generators.categoryFor(Category.QUERY) == ['$.y[1]': new DateGenerator('yyyy')]
   }
 
   def 'supports setting query parameters from provider states'() {
