@@ -8,13 +8,15 @@ object QueryMatcher : KLogging() {
 
   private fun compare(
     parameter: String,
+    index: Int,
     expected: String?,
     actual: String?,
     context: MatchingContext
   ): List<QueryMismatch> {
-    return if (context.matcherDefined(listOf(parameter))) {
+    val ruleGroup = context.selectBestMatcherForValue(parameter, index)
+    return if (ruleGroup != null) {
       logger.debug { "compareQueryParameterValues: Matcher defined for query parameter '$parameter'" }
-      Matchers.domatch(context, listOf(parameter), expected, actual, QueryMismatchFactory)
+      domatch(ruleGroup, listOf(parameter), expected, actual, QueryMismatchFactory, context)
     } else {
       logger
         .debug { "compareQueryParameterValues: No matcher defined for query parameter '$parameter', using equality" }
@@ -39,7 +41,7 @@ object QueryMatcher : KLogging() {
       .mapIndexed { index, value -> index to value }
       .flatMap { (index, value) ->
         when {
-          index < actual.size -> compare(parameter, value, actual[index], context)
+          index < actual.size -> compare(parameter, index, value, actual[index], context)
           !context.matcherDefined(path) ->
             listOf(QueryMismatch(parameter, expected.toString(), actual.toString(),
               "Expected query parameter '$parameter' with value '$value' but was missing",

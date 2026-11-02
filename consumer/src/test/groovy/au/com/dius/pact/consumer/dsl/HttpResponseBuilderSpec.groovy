@@ -81,9 +81,9 @@ class HttpResponseBuilderSpec extends Specification {
     response.matchingRules.rulesForCategory('header') == new MatchingRuleCategory('header',
       [
         A: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
-        'B[1]': new MatchingRuleGroup([new NumberTypeMatcher(NumberTypeMatcher.NumberType.NUMBER)]),
+        '$.B[1]': new MatchingRuleGroup([new NumberTypeMatcher(NumberTypeMatcher.NumberType.NUMBER)]),
         x: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
-        'y[1]': new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
+        '$.y[1]': new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
         x2: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')])
       ]
     )

@@ -2,6 +2,7 @@ package au.com.dius.pact.consumer.dsl
 
 import au.com.dius.pact.core.model.HttpRequest
 import au.com.dius.pact.core.model.generators.Category
+import au.com.dius.pact.core.model.constructPath
 import au.com.dius.pact.core.model.queryStringToMap
 
 /**
@@ -110,7 +111,9 @@ open class HttpRequestBuilder(private val request: HttpRequest): HttpPartBuilder
       is List<*> -> value.mapIndexed { index, v ->
         if (v is Matcher) {
           if (v.matcher != null) {
-            request.matchingRules.addCategory("query").addRule("$key[$index]", v.matcher!!)
+            request.matchingRules.addCategory("query").addRule(
+              constructPath(listOf("\$", key, index.toString())),
+              v.matcher!!)
           }
           if (v.generator != null) {
             request.generators.addGenerator(Category.QUERY, "$key[$index]", v.generator!!)
@@ -215,7 +218,9 @@ open class HttpRequestBuilder(private val request: HttpRequest): HttpPartBuilder
           (entry.value as List<*>).mapIndexed { index, v ->
             if (v is Matcher) {
               if (v.matcher != null) {
-                request.matchingRules.addCategory("query").addRule("$k[$index]", v.matcher!!)
+                request.matchingRules.addCategory("query").addRule(
+                  constructPath(listOf("\$", k, index.toString())),
+                  v.matcher!!)
               }
               if (v.generator != null) {
                 request.generators.addGenerator(Category.QUERY, "$k[$index]", v.generator!!)

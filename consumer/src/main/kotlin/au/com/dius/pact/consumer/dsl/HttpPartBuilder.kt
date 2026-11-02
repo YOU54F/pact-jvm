@@ -7,6 +7,7 @@ import au.com.dius.pact.core.model.ContentType
 import au.com.dius.pact.core.model.ContentType.Companion.JSON
 import au.com.dius.pact.core.model.OptionalBody
 import au.com.dius.pact.core.model.generators.Category
+import au.com.dius.pact.core.model.constructPath
 import au.com.dius.pact.core.model.matchingrules.ContentTypeMatcher
 import au.com.dius.pact.core.support.isNotEmpty
 import io.ktor.http.HeaderValue
@@ -26,7 +27,9 @@ abstract class HttpPartBuilder(private val part: IHttpPart) {
       is List<*> -> value.mapIndexed { index, v ->
         if (v is Matcher) {
           if (v.matcher != null) {
-            part.matchingRules.addCategory("header").addRule("$key[$index]", v.matcher!!)
+            part.matchingRules.addCategory("header").addRule(
+              constructPath(listOf("\$", key, index.toString())),
+              v.matcher!!)
           }
           if (v.generator != null) {
             part.generators.addGenerator(Category.HEADER, "$key[$index]", v.generator!!)
@@ -155,7 +158,9 @@ abstract class HttpPartBuilder(private val part: IHttpPart) {
         (entry.value as List<*>).mapIndexed { index, v ->
           if (v is Matcher) {
             if (v.matcher != null) {
-              part.matchingRules.addCategory("header").addRule("$k[$index]", v.matcher!!)
+              part.matchingRules.addCategory("header").addRule(
+                constructPath(listOf("\$", k, index.toString())),
+                v.matcher!!)
             }
             if (v.generator != null) {
               part.generators.addGenerator(Category.HEADER, "$k[$index]", v.generator!!)
@@ -183,8 +188,11 @@ abstract class HttpPartBuilder(private val part: IHttpPart) {
    * The body keeps its content type, so it is still compared as that type.
    */
   open fun removeHeader(name: String): HttpPartBuilder {
+    val lowerName = name.lowercase()
     val forHeader = { key: String ->
-      key.equals(name, ignoreCase = true) || key.lowercase().startsWith(name.lowercase() + "[")
+      val lowerKey = key.lowercase()
+      key.equals(name, ignoreCase = true) || lowerKey.startsWith("$lowerName[") ||
+        lowerKey.startsWith("\$.$lowerName[") || lowerKey.startsWith("\$['$lowerName'][")
     }
     part.headers.keys.removeIf { it.equals(name, ignoreCase = true) }
     if (part.matchingRules.hasCategory("header")) {

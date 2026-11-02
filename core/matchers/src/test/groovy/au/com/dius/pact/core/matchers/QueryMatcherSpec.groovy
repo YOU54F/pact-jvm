@@ -45,4 +45,33 @@ class QueryMatcherSpec extends Specification {
       ['100'], ['100', '200', '300x'], context)*.mismatch ==
       ["Expected '300x' to match '\\d+'"]
   }
+
+  def 'an indexed rule only applies to its value'() {
+    given:
+    context.matchers.addRule('$.a[1]', new RegexMatcher('\\d+'))
+
+    expect:
+    QueryMatcher.compareQuery('a', ['x', '100'], ['x', '42'], context).empty
+    QueryMatcher.compareQuery('a', ['x', '100'], ['y', '42'], context)*.mismatch ==
+      ["Expected 'x' but received 'y' for query parameter 'a'"]
+    QueryMatcher.compareQuery('a', ['x', '100'], ['x', 'abc'], context)*.mismatch == ["Expected 'abc' to match '\\d+'"]
+  }
+
+  def 'an indexed rule overrides the rule for the name for that value'() {
+    given:
+    context.matchers.addRule('a', new RegexMatcher('[a-z]+'))
+    context.matchers.addRule('$.a[1]', new RegexMatcher('\\d+'))
+
+    expect:
+    QueryMatcher.compareQuery('a', ['x', '100'], ['y', '42'], context).empty
+    QueryMatcher.compareQuery('a', ['x', '100'], ['y', 'z'], context)*.mismatch == ["Expected 'z' to match '\\d+'"]
+  }
+
+  def 'a parameter name with brackets is a plain name'() {
+    given:
+    context.matchers.addRule('ids[0]', new RegexMatcher('\\d+'))
+
+    expect:
+    QueryMatcher.compareQuery('ids[0]', ['100'], ['42'], context).empty
+  }
 }

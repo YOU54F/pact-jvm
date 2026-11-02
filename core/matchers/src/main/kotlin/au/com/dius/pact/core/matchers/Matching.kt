@@ -62,6 +62,33 @@ data class MatchingContext @JvmOverloads constructor(
     }
   }
 
+  /**
+   * Selects the rules for one value of a header or query parameter. A rule keyed by the value's index
+   * (`$.name[1]` or `$['name'][1]`) overrides the rule keyed by the name. Keys that are not path expressions are
+   * plain names, even if they contain brackets (`ids[0]`).
+   */
+  @JvmOverloads
+  fun selectBestMatcherForValue(
+    name: String,
+    index: Int,
+    pathComparator: Comparator<String> = Comparator.naturalOrder()
+  ): MatchingRuleGroup? {
+    val indexed = matchers.matchingRules.entries.firstOrNull { (key, _) ->
+      val tokens = indexedKeyTokens(key)
+      tokens != null && pathComparator.compare(tokens.first, name) == 0 && tokens.second == index
+    }
+    return indexed?.value ?: matchers.matchingRules.entries
+      .firstOrNull { pathComparator.compare(it.key, name) == 0 }?.value
+  }
+
+  private fun indexedKeyTokens(key: String): Pair<String, Int>? {
+    if (!key.startsWith("$")) return null
+    val tokens = runCatching { parsePath(key) }.getOrNull() ?: return null
+    return if (tokens.size == 3 && tokens[1] is PathToken.Field && tokens[2] is PathToken.Index) {
+      (tokens[1] as PathToken.Field).name to (tokens[2] as PathToken.Index).index
+    } else null
+  }
+
   class BestMatcherResult(path: List<String>, val pathExp: String, val ruleGroup: MatchingRuleGroup) {
     val pathTokens: List<PathToken> = parsePath(pathExp)
     val pathWeight: Int = if (ruleGroup.rules.none { it is ValuesMatcher } || pathTokens.size == path.size)
@@ -221,7 +248,7 @@ object Matching {
     context: MatchingContext
   ): List<HeaderMismatch> {
     val mismatches = expected.padTo(actual.size).mapIndexed { index, headerValue ->
-      HeaderMatcher.compareHeader(key, headerValue, actual.getOrElse(index) { "" }, context)
+      HeaderMatcher.compareHeader(key, headerValue, actual.getOrElse(index) { "" }, context, index)
     }.filterNotNull()
     return if (mismatches.isNotEmpty() && matchesWholeValue(key, expected, actual, context)) emptyList()
     else mismatches

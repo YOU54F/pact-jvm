@@ -44,14 +44,21 @@ object HeaderMatcher {
    * Compares the expected header value to the actual, delegating to any matching rules if present
    */
   @JvmStatic
-  fun compareHeader(headerKey: String, expected: String, actual: String, context: MatchingContext): HeaderMismatch? {
+  @JvmOverloads
+  fun compareHeader(
+    headerKey: String,
+    expected: String,
+    actual: String,
+    context: MatchingContext,
+    index: Int = 0
+  ): HeaderMismatch? {
     logger.debug { "Comparing header '$headerKey': '$actual' to '$expected'" }
 
     val comparator = Comparator<String> { a, b -> a.compareTo(b, ignoreCase = true) }
+    val ruleGroup = context.selectBestMatcherForValue(headerKey, index, comparator)
     return when {
-      context.matcherDefined(listOf(headerKey), comparator) -> {
-        val matchResult = Matchers.domatch(context, listOf(headerKey), expected, actual,
-          HeaderMismatchFactory, comparator)
+      ruleGroup != null -> {
+        val matchResult = domatch(ruleGroup, listOf(headerKey), expected, actual, HeaderMismatchFactory, context)
         return matchResult.fold(null as HeaderMismatch?) { acc, item -> acc?.merge(item) ?: item }
       }
       headerKey.equals("Content-Type", ignoreCase = true) ||
