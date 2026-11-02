@@ -120,6 +120,19 @@ class GeneratedRequestSpec extends Specification {
     generated.query['ids[0]'].every { it != 'x' && it != 'y' }
   }
 
+  def 'a query generator for a missing parameter generates a single value'() {
+    given:
+    def generators = new Generators()
+    generators.addGenerator(Category.QUERY, 'id', new ProviderStateGenerator('id'))
+    request = new Request(generators: generators, query: [a: ['x']])
+
+    when:
+    def generated = request.generatedRequest([providerState: [id: 'X']], GeneratorTestMode.Provider)
+
+    then:
+    generated.query == [a: ['x'], id: ['X']]
+  }
+
   def 'applies query generator for query parameters to the copy of the request'() {
     given:
     request.query = [A: ['a', 'b'], B: ['b']]

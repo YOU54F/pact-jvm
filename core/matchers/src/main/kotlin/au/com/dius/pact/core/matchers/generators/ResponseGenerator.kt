@@ -54,8 +54,7 @@ object DefaultResponseGenerator: ResponseGenerator, MessageContentsGenerator, KL
     val headerGenerators = r.setupGenerators(Category.HEADER, context)
     if (headerGenerators.isNotEmpty()) {
       val headers: MutableMap<String, List<String?>> = r.headers.toMutableMap()
-      Generators.applyValueGenerators(headers, headerGenerators, testMode, context, ignoreCase = true,
-        generateMissing = true)
+      Generators.applyValueGenerators(headers, headerGenerators, testMode, context, ignoreCase = true)
       r.headers.clear()
       r.headers.putAll(headers.mapValues { (_, values) -> values.map { it.toString() } })
     }

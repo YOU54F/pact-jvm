@@ -140,7 +140,7 @@ data class Generators(val categories: MutableMap<Category, MutableMap<String, Ge
 
     /**
      * Applies the generators to the values of headers or query parameters. A generator keyed by the name applies to
-     * every value (and generates a single value if [generateMissing] is set and there are none). A generator keyed
+     * every value (and generates a single value if there are none). A generator keyed
      * by an indexed path (`$.name[1]`) applies only to that value, and runs after the ones for the name.
      */
     @Suppress("LongParameterList")
@@ -149,8 +149,7 @@ data class Generators(val categories: MutableMap<Category, MutableMap<String, Ge
       generators: Map<String, Generator>,
       mode: GeneratorTestMode,
       context: MutableMap<String, Any>,
-      ignoreCase: Boolean,
-      generateMissing: Boolean
+      ignoreCase: Boolean
     ) {
       fun existingKey(name: String) = values.keys.firstOrNull { it.equals(name, ignoreCase) }
       val (indexed, named) = generators.entries.filter { it.value.correspondsToMode(mode) }
@@ -159,7 +158,7 @@ data class Generators(val categories: MutableMap<Category, MutableMap<String, Ge
         val existing = existingKey(key)
         if (existing != null) {
           values[existing] = values[existing]!!.map { generator.generate(context, it).toString() }
-        } else if (generateMissing) {
+        } else {
           values[key] = listOf(generator.generate(context, null).toString())
         }
       }
