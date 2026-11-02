@@ -178,6 +178,23 @@ abstract class HttpPartBuilder(private val part: IHttpPart) {
   }
 
   /**
+   * Removes a header (matched case-insensitively) along with any matching rules and generators set up for it. This can
+   * be used to remove a header that was added by default, like the `Content-Type` header added when the body is set.
+   * The body keeps its content type, so it is still compared as that type.
+   */
+  open fun removeHeader(name: String): HttpPartBuilder {
+    val forHeader = { key: String ->
+      key.equals(name, ignoreCase = true) || key.lowercase().startsWith(name.lowercase() + "[")
+    }
+    part.headers.keys.removeIf { it.equals(name, ignoreCase = true) }
+    if (part.matchingRules.hasCategory("header")) {
+      part.matchingRules.rulesForCategory("header").matchingRules.keys.removeIf(forHeader)
+    }
+    part.generators.categories[Category.HEADER]?.keys?.removeIf(forHeader)
+    return this
+  }
+
+  /**
    * Sets the body of the HTTP part as a string value. If the content type is not already set, it will try to detect
    * the content type from the given string, otherwise will default to text/plain.
    */
