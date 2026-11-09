@@ -35,6 +35,10 @@ open class HttpResponseBuilder(private val response: HttpResponse): HttpPartBuil
     return super.headers(values) as HttpResponseBuilder
   }
 
+  override fun removeHeader(name: String): HttpResponseBuilder {
+    return super.removeHeader(name) as HttpResponseBuilder
+  }
+
    /**
      * Match a set cookie header
      * @param cookie Cookie name to match

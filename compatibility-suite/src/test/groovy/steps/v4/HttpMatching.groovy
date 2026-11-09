@@ -7,6 +7,7 @@ import au.com.dius.pact.core.matchers.RequestMatchResult
 import au.com.dius.pact.core.model.Consumer
 import au.com.dius.pact.core.model.HttpRequest
 import au.com.dius.pact.core.model.HttpResponse
+import au.com.dius.pact.core.model.OptionalBody
 import au.com.dius.pact.core.model.Provider
 import au.com.dius.pact.core.model.V4Interaction
 import au.com.dius.pact.core.model.V4Pact
@@ -133,6 +134,21 @@ class HttpMatching {
       }
       receivedRequests[0].body = part.body
       receivedRequests[0].headers.putAll(part.headers)
+    }
+  }
+
+  @Given('the {string} header is removed from the expected request')
+  void the_header_is_removed_from_the_expected_request(String name) {
+    expectedRequest.headers.removeAll { key, value -> key.equalsIgnoreCase(name) }
+  }
+
+  @Given('the {string} header is removed from the received request')
+  void the_header_is_removed_from_the_received_request(String name) {
+    def request = receivedRequests[0]
+    request.headers.removeAll { key, value -> key.equalsIgnoreCase(name) }
+    // A real request carries no body type of its own, only what can be sniffed from the bytes
+    if (request.body.present) {
+      request.body = OptionalBody.body(request.body.unwrap())
     }
   }
 

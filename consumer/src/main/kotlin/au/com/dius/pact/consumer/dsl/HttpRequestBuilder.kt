@@ -65,6 +65,10 @@ open class HttpRequestBuilder(private val request: HttpRequest): HttpPartBuilder
     return super.headers(values) as HttpRequestBuilder
   }
 
+  override fun removeHeader(name: String): HttpRequestBuilder {
+    return super.removeHeader(name) as HttpRequestBuilder
+  }
+
   override fun body(body: String): HttpRequestBuilder {
     return super.body(body) as HttpRequestBuilder
   }

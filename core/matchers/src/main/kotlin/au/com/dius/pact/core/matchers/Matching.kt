@@ -256,7 +256,10 @@ object Matching {
     logger.debug { "matchBody: context=$context" }
 
     val expectedContentType = expected.determineContentType()
-    val actualContentType = actual.determineContentType()
+    // Without a Content-Type header the actual type can only be sniffed from the body, so it can't contradict the
+    // expected type (pact-go#263)
+    val actualContentType = if (actual.contentTypeHeader() == null) expectedContentType
+      else actual.determineContentType()
     val rootMatcher = expected.matchingRules.rulesForCategory("body").matchingRules["$"]
 
     return when {

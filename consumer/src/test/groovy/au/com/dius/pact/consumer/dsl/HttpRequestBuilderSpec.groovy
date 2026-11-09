@@ -276,6 +276,26 @@ class HttpRequestBuilderSpec extends Specification {
     request.headers['content-type'] == ['application/octet-stream']
   }
 
+  def 'allows removing a header, along with any matching rules and generators for it'() {
+    when:
+    def request = builder
+      .body('hello'.bytes)
+      .header('X-Id', regexp('\\d+', '1234'))
+      .header('X-Date', date('yyyy-MM-dd'))
+      .header('X-Values', [regexp('\\d+', '1'), regexp('\\w+', 'a')])
+      .removeHeader('Content-Type')
+      .removeHeader('x-id')
+      .removeHeader('X-Date')
+      .removeHeader('X-Values')
+      .build()
+
+    then:
+    !request.headers
+    request.body.contentType.toString() == 'application/octet-stream'
+    !request.matchingRules.rulesForCategory('header').matchingRules
+    !request.generators.categories[Category.HEADER]
+  }
+
   def 'allows setting the body of the request as a a byte array with a content type'() {
     given:
     def gif1px = [
