@@ -15,6 +15,7 @@ import au.com.dius.pact.core.model.matchingrules.MaxEqualsIgnoreOrderMatcher
 import au.com.dius.pact.core.model.matchingrules.MinEqualsIgnoreOrderMatcher
 import au.com.dius.pact.core.model.matchingrules.MinMaxEqualsIgnoreOrderMatcher
 import au.com.dius.pact.core.model.matchingrules.ValuesMatcher
+import au.com.dius.pact.core.model.indexedValueKey
 import au.com.dius.pact.core.model.parsePath
 import au.com.dius.pact.core.support.padTo
 import io.pact.plugins.jvm.core.PluginConfiguration
@@ -60,6 +61,25 @@ data class MatchingContext @JvmOverloads constructor(
     } else {
       matcherCategory.matchingRules.values.firstOrNull() ?: MatchingRuleGroup()
     }
+  }
+
+  /**
+   * Selects the rules for one value of a header or query parameter. A rule keyed by the value's index
+   * (`$.name[1]` or `$['name'][1]`) overrides the rule keyed by the name. Keys that are not path expressions are
+   * plain names, even if they contain brackets (`ids[0]`).
+   */
+  @JvmOverloads
+  fun selectBestMatcherForValue(
+    name: String,
+    index: Int,
+    pathComparator: Comparator<String> = Comparator.naturalOrder()
+  ): MatchingRuleGroup? {
+    val indexed = matchers.matchingRules.entries.firstOrNull { (key, _) ->
+      val tokens = indexedValueKey(key)
+      tokens != null && pathComparator.compare(tokens.first, name) == 0 && tokens.second == index
+    }
+    return indexed?.value ?: matchers.matchingRules.entries
+      .firstOrNull { pathComparator.compare(it.key, name) == 0 }?.value
   }
 
   class BestMatcherResult(path: List<String>, val pathExp: String, val ruleGroup: MatchingRuleGroup) {
@@ -221,7 +241,7 @@ object Matching {
     context: MatchingContext
   ): List<HeaderMismatch> {
     val mismatches = expected.padTo(actual.size).mapIndexed { index, headerValue ->
-      HeaderMatcher.compareHeader(key, headerValue, actual.getOrElse(index) { "" }, context)
+      HeaderMatcher.compareHeader(key, headerValue, actual.getOrElse(index) { "" }, context, index)
     }.filterNotNull()
     return if (mismatches.isNotEmpty() && matchesWholeValue(key, expected, actual, context)) emptyList()
     else mismatches
@@ -256,7 +276,10 @@ object Matching {
     logger.debug { "matchBody: context=$context" }
 
     val expectedContentType = expected.determineContentType()
-    val actualContentType = actual.determineContentType()
+    // Without a Content-Type header the actual type can only be sniffed from the body, so it can't contradict the
+    // expected type (pact-go#263)
+    val actualContentType = if (actual.contentTypeHeader() == null) expectedContentType
+      else actual.determineContentType()
     val rootMatcher = expected.matchingRules.rulesForCategory("body").matchingRules["$"]
 
     return when {

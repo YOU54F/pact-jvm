@@ -15,6 +15,7 @@ import au.com.dius.pact.core.model.matchingrules.RuleLogic
 import kotlin.Pair
 import spock.lang.Specification
 
+import static au.com.dius.pact.consumer.dsl.Matchers.date
 import static au.com.dius.pact.consumer.dsl.Matchers.fromProviderState
 import static au.com.dius.pact.consumer.dsl.Matchers.numeric
 import static au.com.dius.pact.consumer.dsl.Matchers.regexp
@@ -80,9 +81,9 @@ class HttpResponseBuilderSpec extends Specification {
     response.matchingRules.rulesForCategory('header') == new MatchingRuleCategory('header',
       [
         A: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
-        'B[1]': new MatchingRuleGroup([new NumberTypeMatcher(NumberTypeMatcher.NumberType.NUMBER)]),
+        '$.B[1]': new MatchingRuleGroup([new NumberTypeMatcher(NumberTypeMatcher.NumberType.NUMBER)]),
         x: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
-        'y[1]': new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
+        '$.y[1]': new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
         x2: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')])
       ]
     )
@@ -295,6 +296,26 @@ class HttpResponseBuilderSpec extends Specification {
     response.body.unwrap() == gif1px
     response.body.contentType.toString() == 'application/octet-stream'
     response.headers['content-type'] == ['application/octet-stream']
+  }
+
+  def 'allows removing a header, along with any matching rules and generators for it'() {
+    when:
+    def response = builder
+      .body('hello'.bytes)
+      .header('X-Id', regexp('\\d+', '1234'))
+      .header('X-Date', date('yyyy-MM-dd'))
+      .header('X-Values', [regexp('\\d+', '1'), regexp('\\w+', 'a')])
+      .removeHeader('Content-Type')
+      .removeHeader('x-id')
+      .removeHeader('X-Date')
+      .removeHeader('X-Values')
+      .build()
+
+    then:
+    !response.headers
+    response.body.contentType.toString() == 'application/octet-stream'
+    !response.matchingRules.rulesForCategory('header').matchingRules
+    !response.generators.categories[Category.HEADER]
   }
 
   def 'allows setting the body of the response as a a byte array with a content type'() {

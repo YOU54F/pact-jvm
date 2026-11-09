@@ -112,9 +112,9 @@ class HttpRequestBuilderSpec extends Specification {
     request.matchingRules.rulesForCategory('header') == new MatchingRuleCategory('header',
       [
         A: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
-        'B[1]': new MatchingRuleGroup([new NumberTypeMatcher(NumberTypeMatcher.NumberType.NUMBER)]),
+        '$.B[1]': new MatchingRuleGroup([new NumberTypeMatcher(NumberTypeMatcher.NumberType.NUMBER)]),
         x: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
-        'y[1]': new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
+        '$.y[1]': new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
         x2: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')])
       ]
     )
@@ -276,6 +276,26 @@ class HttpRequestBuilderSpec extends Specification {
     request.headers['content-type'] == ['application/octet-stream']
   }
 
+  def 'allows removing a header, along with any matching rules and generators for it'() {
+    when:
+    def request = builder
+      .body('hello'.bytes)
+      .header('X-Id', regexp('\\d+', '1234'))
+      .header('X-Date', date('yyyy-MM-dd'))
+      .header('X-Values', [regexp('\\d+', '1'), regexp('\\w+', 'a')])
+      .removeHeader('Content-Type')
+      .removeHeader('x-id')
+      .removeHeader('X-Date')
+      .removeHeader('X-Values')
+      .build()
+
+    then:
+    !request.headers
+    request.body.contentType.toString() == 'application/octet-stream'
+    !request.matchingRules.rulesForCategory('header').matchingRules
+    !request.generators.categories[Category.HEADER]
+  }
+
   def 'allows setting the body of the request as a a byte array with a content type'() {
     given:
     def gif1px = [
@@ -342,13 +362,13 @@ class HttpRequestBuilderSpec extends Specification {
     request.matchingRules.rulesForCategory('query') == new MatchingRuleCategory('query',
       [
         A: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')]),
-        'B[1]': new MatchingRuleGroup([new NumberTypeMatcher(NumberTypeMatcher.NumberType.NUMBER)]),
+        '$.B[1]': new MatchingRuleGroup([new NumberTypeMatcher(NumberTypeMatcher.NumberType.NUMBER)]),
         x: new MatchingRuleGroup([new DateMatcher('yyyy')]),
-        'y[1]': new MatchingRuleGroup([new DateMatcher('yyyy')]),
+        '$.y[1]': new MatchingRuleGroup([new DateMatcher('yyyy')]),
         x2: new MatchingRuleGroup([new RegexMatcher('\\d+', '111')])
       ]
     )
-    request.generators.categoryFor(Category.QUERY) == ['y[1]': new DateGenerator('yyyy')]
+    request.generators.categoryFor(Category.QUERY) == ['$.y[1]': new DateGenerator('yyyy')]
   }
 
   def 'supports setting query parameters from provider states'() {

@@ -64,15 +64,13 @@ class Request @Suppress("LongParameterList") @JvmOverloads constructor(
     }
     val headerGenerators = r.setupGenerators(Category.HEADER, context)
     if (headerGenerators.isNotEmpty()) {
-      Generators.applyGenerators(headerGenerators, mode) { key, g ->
-        r.headers[key] = listOf(g.generate(context, r.headers[key]).toString())
-      }
+      val headers: MutableMap<String, List<String?>> = r.headers.toMutableMap()
+      Generators.applyValueGenerators(headers, headerGenerators, mode, context, ignoreCase = true)
+      r.headers = headers.mapValues { (_, values) -> values.map { it.toString() } }.toMutableMap()
     }
     val queryGenerators = r.setupGenerators(Category.QUERY, context)
     if (queryGenerators.isNotEmpty()) {
-      Generators.applyGenerators(queryGenerators, mode) { key, g ->
-        r.query[key] = r.query.getOrElse(key) { emptyList() }.map { g.generate(context, r.query[key]).toString() }
-      }
+      Generators.applyValueGenerators(r.query, queryGenerators, mode, context, ignoreCase = false)
     }
     if (r.body.isPresent()) {
       val bodyGenerators = r.setupGenerators(Category.BODY, context)

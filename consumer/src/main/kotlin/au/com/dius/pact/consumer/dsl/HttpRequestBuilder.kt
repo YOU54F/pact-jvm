@@ -2,6 +2,7 @@ package au.com.dius.pact.consumer.dsl
 
 import au.com.dius.pact.core.model.HttpRequest
 import au.com.dius.pact.core.model.generators.Category
+import au.com.dius.pact.core.model.constructPath
 import au.com.dius.pact.core.model.queryStringToMap
 
 /**
@@ -65,6 +66,10 @@ open class HttpRequestBuilder(private val request: HttpRequest): HttpPartBuilder
     return super.headers(values) as HttpRequestBuilder
   }
 
+  override fun removeHeader(name: String): HttpRequestBuilder {
+    return super.removeHeader(name) as HttpRequestBuilder
+  }
+
   override fun body(body: String): HttpRequestBuilder {
     return super.body(body) as HttpRequestBuilder
   }
@@ -106,10 +111,13 @@ open class HttpRequestBuilder(private val request: HttpRequest): HttpPartBuilder
       is List<*> -> value.mapIndexed { index, v ->
         if (v is Matcher) {
           if (v.matcher != null) {
-            request.matchingRules.addCategory("query").addRule("$key[$index]", v.matcher!!)
+            request.matchingRules.addCategory("query").addRule(
+              constructPath(listOf("\$", key, index.toString())),
+              v.matcher!!)
           }
           if (v.generator != null) {
-            request.generators.addGenerator(Category.QUERY, "$key[$index]", v.generator!!)
+            request.generators.addGenerator(Category.QUERY,
+              constructPath(listOf("\$", key, index.toString())), v.generator!!)
           }
           v.value.toString()
         } else {
@@ -211,10 +219,13 @@ open class HttpRequestBuilder(private val request: HttpRequest): HttpPartBuilder
           (entry.value as List<*>).mapIndexed { index, v ->
             if (v is Matcher) {
               if (v.matcher != null) {
-                request.matchingRules.addCategory("query").addRule("$k[$index]", v.matcher!!)
+                request.matchingRules.addCategory("query").addRule(
+                  constructPath(listOf("\$", k, index.toString())),
+                  v.matcher!!)
               }
               if (v.generator != null) {
-                request.generators.addGenerator(Category.QUERY, "$k[$index]", v.generator!!)
+                request.generators.addGenerator(Category.QUERY,
+                  constructPath(listOf("\$", k, index.toString())), v.generator!!)
               }
               v.value.toString()
             } else {

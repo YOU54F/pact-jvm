@@ -126,4 +126,21 @@ class HeaderMatcherSpec extends Specification {
     'abc, xyz'  | 'abc,xyz'
     'abc , xyz' | 'abc ,xyz'
   }
+
+  @Unroll
+  def 'an indexed rule overrides the rule for the header for that value - #desc'() {
+    given:
+    context.matchers.addRule('X-Request', new RegexMatcher('^[a-z]+$'))
+    context.matchers.addRule("\$['x-request'][1]", new RegexMatcher('^[0-9]+$'))
+
+    expect:
+    Matching.INSTANCE.matchHeaders(['X-Request': ['a', '100']], ['X-Request': actual], context)
+      .collectMany { it.result }.empty == ok
+
+    where:
+    desc                         | actual        | ok
+    'both values match'          | ['b', '42']   | true
+    'the indexed value fails'    | ['b', 'c']    | false
+    'the first value fails'      | ['1', '42']   | false
+  }
 }

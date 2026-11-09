@@ -7,6 +7,7 @@ import au.com.dius.pact.core.model.ContentType
 import au.com.dius.pact.core.model.ContentType.Companion.JSON
 import au.com.dius.pact.core.model.OptionalBody
 import au.com.dius.pact.core.model.generators.Category
+import au.com.dius.pact.core.model.constructPath
 import au.com.dius.pact.core.model.matchingrules.ContentTypeMatcher
 import au.com.dius.pact.core.support.isNotEmpty
 import io.ktor.http.HeaderValue
@@ -26,10 +27,13 @@ abstract class HttpPartBuilder(private val part: IHttpPart) {
       is List<*> -> value.mapIndexed { index, v ->
         if (v is Matcher) {
           if (v.matcher != null) {
-            part.matchingRules.addCategory("header").addRule("$key[$index]", v.matcher!!)
+            part.matchingRules.addCategory("header").addRule(
+              constructPath(listOf("\$", key, index.toString())),
+              v.matcher!!)
           }
           if (v.generator != null) {
-            part.generators.addGenerator(Category.HEADER, "$key[$index]", v.generator!!)
+            part.generators.addGenerator(Category.HEADER,
+              constructPath(listOf("\$", key, index.toString())), v.generator!!)
           }
           v.value.toString()
         } else {
@@ -155,10 +159,13 @@ abstract class HttpPartBuilder(private val part: IHttpPart) {
         (entry.value as List<*>).mapIndexed { index, v ->
           if (v is Matcher) {
             if (v.matcher != null) {
-              part.matchingRules.addCategory("header").addRule("$k[$index]", v.matcher!!)
+              part.matchingRules.addCategory("header").addRule(
+                constructPath(listOf("\$", k, index.toString())),
+                v.matcher!!)
             }
             if (v.generator != null) {
-              part.generators.addGenerator(Category.HEADER, "$k[$index]", v.generator!!)
+              part.generators.addGenerator(Category.HEADER,
+                constructPath(listOf("\$", k, index.toString())), v.generator!!)
             }
             v.value.toString()
           } else {
@@ -174,6 +181,26 @@ abstract class HttpPartBuilder(private val part: IHttpPart) {
 
     part.headers.putAll(headersMap)
 
+    return this
+  }
+
+  /**
+   * Removes a header (matched case-insensitively) along with any matching rules and generators set up for it. This can
+   * be used to remove a header that was added by default, like the `Content-Type` header added when the body is set.
+   * The body keeps its content type, so it is still compared as that type.
+   */
+  open fun removeHeader(name: String): HttpPartBuilder {
+    val lowerName = name.lowercase()
+    val forHeader = { key: String ->
+      val lowerKey = key.lowercase()
+      key.equals(name, ignoreCase = true) || lowerKey.startsWith("$lowerName[") ||
+        lowerKey.startsWith("\$.$lowerName[") || lowerKey.startsWith("\$['$lowerName'][")
+    }
+    part.headers.keys.removeIf { it.equals(name, ignoreCase = true) }
+    if (part.matchingRules.hasCategory("header")) {
+      part.matchingRules.rulesForCategory("header").matchingRules.keys.removeIf(forHeader)
+    }
+    part.generators.categories[Category.HEADER]?.keys?.removeIf(forHeader)
     return this
   }
 
